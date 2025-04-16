@@ -38,3 +38,68 @@ class Rook extends ChessPiece {
         return row == newRow || col == newCol;
     }
 }
+```
+
+### Move Validation
+```java
+private ChessPiece promotePawn(int row, int col, Color color) {
+    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+    alert.setTitle("Pawn Promotion");
+    alert.setHeaderText("Choose promotion piece:");
+    ButtonType queen = new ButtonType("Queen"), 
+              rook = new ButtonType("Rook"),
+              bishop = new ButtonType("Bishop"), 
+              knight = new ButtonType("Knight");
+    alert.getButtonTypes().setAll(queen, rook, bishop, knight);
+    
+    Optional<ButtonType> result = alert.showAndWait();
+    return result.map(button -> {
+        if (button == rook) return new Rook(row, col, color);
+        if (button == bishop) return new Bishop(row, col, color);
+        if (button == knight) return new Knight(row, col, color);
+        return new Queen(row, col, color);
+    }).orElse(new Queen(row, col, color));
+}
+```
+
+### Pawn Promotion
+```java
+private ChessPiece promotePawn(int row, int col, Color color) {
+    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+    alert.setTitle("Pawn Promotion");
+    alert.setHeaderText("Choose promotion piece:");
+    ButtonType queen = new ButtonType("Queen"), 
+              rook = new ButtonType("Rook"),
+              bishop = new ButtonType("Bishop"), 
+              knight = new ButtonType("Knight");
+    alert.getButtonTypes().setAll(queen, rook, bishop, knight);
+    
+    Optional<ButtonType> result = alert.showAndWait();
+    return result.map(button -> {
+        if (button == rook) return new Rook(row, col, color);
+        if (button == bishop) return new Bishop(row, col, color);
+        if (button == knight) return new Knight(row, col, color);
+        return new Queen(row, col, color);
+    }).orElse(new Queen(row, col, color));
+}
+```
+
+### Check Detection
+```java
+private boolean isKingInCheck(Color kingColor) {
+    int[] kingPos = findKing(kingColor);
+    if (kingPos == null) return false;
+    
+    for (int r = 0; r < SIZE; r++) {
+        for (int c = 0; c < SIZE; c++) {
+            if (board[r][c] != null && board[r][c].color != kingColor) {
+                if (isValidMoveWithoutCheckTest(r, c, kingPos[0], kingPos[1])) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+```
+
