@@ -1,6 +1,6 @@
 # Chess Game in JavaFX
 
-A simple chess game implementation using JavaFX with move validation, castling, pawn promotion, and check detection.
+A simple two player chess game implementation using JavaFX with move validation, castling, pawn promotion, and check detection.
 
 ## Features
 - Full chess rule implementation including:
