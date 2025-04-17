@@ -1,105 +1,93 @@
-# Chess Game in JavaFX
+# Java Chess Game with Stockfish AI Integration
 
-A simple chess game implementation using JavaFX with move validation, castling, pawn promotion, and check detection.
+A fully functional Chess game built with **JavaFX** and enhanced with the powerful **Stockfish** chess engine for AI-based move generation.
 
 ## Features
-- Full chess rule implementation including:
-  - Piece movement validation
-  - Castling (king & rook)
-  - Pawn promotion with user selection
-  - Check detection and visualization
-  - Turn-based play
-  - Basic GUI with board highlighting
 
-## Requirements
-- Java 8+
-- JavaFX SDK
+- Classic chess game logic (rules, check, checkmate, castling, promotion, stalemate).  
+- Play against another player or versus Stockfish AI.  
+- Adjustable AI difficulty by changing Stockfish search depth.  
+- Flip board orientation anytime.  
+- Highlight available legal moves.  
+- Graphical UI with scalable vector-like piece rendering.  
+- Uses UCI (Universal Chess Interface) to communicate with Stockfish.  
 
-## Getting Started
-1. Clone the repository
-2. Open in IDE with JavaFX configured
-3. Run `ChessGame.java`
+## Setup
 
-## Code Structure
-Key components in `ChessGame.java`:
+1. **Download Stockfish**  
+   Get the Stockfish binary for your OS from: https://stockfishchess.org/download/
 
-### ChessPiece Hierarchy
-```java
-abstract class ChessPiece {
-    int row, col;
-    Color color;
-    abstract boolean isValidMove(int newRow, int newCol);
-    abstract void draw(GraphicsContext gc, int x, int y);
-}
+2. **Project Structure**  
+   ```text
+   chesspkg/
+   ├── ChessGame.java
+   ├── StockfishEngine.java
+   └── pieces/
+       ├── ChessPiece.java
+       ├── Rook.java
+       ├── Bishop.java
+       ├── Knight.java
+       ├── Queen.java
+       ├── King.java
+       └── Pawn.java
+   ```
 
-class Rook extends ChessPiece {
-    @Override
-    boolean isValidMove(int newRow, int newCol) {
-        return row == newRow || col == newCol;
-    }
-}
+3. **Configure Stockfish Path**  
+   In `StockfishEngine.java`, update the path to your Stockfish executable:
+   ```java
+   String stockfishPath = "C:\\Path\\To\\Your\\stockfish.exe";
+   ```
+
+## Running the Game
+
+Ensure JavaFX is installed, then compile and run:
+
+```bash
+javac -d bin -cp "path_to_javafx_lib/*" chesspkg/*.java
+java -cp "bin;path_to_javafx_lib/*" chesspkg.ChessGame
 ```
 
-### Move Validation
+> Replace `path_to_javafx_lib` with your JavaFX SDK `lib` directory.
+
+## How to Play
+
+- Toggle **Play against AI** to enable engine opponent.  
+- Select side (White or Black) and AI difficulty.  
+- Legal moves are highlighted; pawn promotions are prompted.  
+- Use **Flip Board** button to change orientation.  
+
+## AI Difficulty Mapping
+
+| Label   | Stockfish Search Depth |
+|---------|------------------------|
+| Easy    | 1                      |
+| Medium  | 7                      |
+| Hard    | 12                     |
+| Expert  | 20                     |
+
+## FEN Conversion Example
+
+Convert board to FEN for Stockfish evaluation:
+
 ```java
-private ChessPiece promotePawn(int row, int col, Color color) {
-    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-    alert.setTitle("Pawn Promotion");
-    alert.setHeaderText("Choose promotion piece:");
-    ButtonType queen = new ButtonType("Queen"), 
-              rook = new ButtonType("Rook"),
-              bishop = new ButtonType("Bishop"), 
-              knight = new ButtonType("Knight");
-    alert.getButtonTypes().setAll(queen, rook, bishop, knight);
-    
-    Optional<ButtonType> result = alert.showAndWait();
-    return result.map(button -> {
-        if (button == rook) return new Rook(row, col, color);
-        if (button == bishop) return new Bishop(row, col, color);
-        if (button == knight) return new Knight(row, col, color);
-        return new Queen(row, col, color);
-    }).orElse(new Queen(row, col, color));
-}
+String fen = stockfish.boardToFEN(board, whiteTurn, castlingRights);
 ```
 
-### Pawn Promotion
+## Closing the Engine
+
+Always terminate Stockfish on exit:
+
 ```java
-private ChessPiece promotePawn(int row, int col, Color color) {
-    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-    alert.setTitle("Pawn Promotion");
-    alert.setHeaderText("Choose promotion piece:");
-    ButtonType queen = new ButtonType("Queen"), 
-              rook = new ButtonType("Rook"),
-              bishop = new ButtonType("Bishop"), 
-              knight = new ButtonType("Knight");
-    alert.getButtonTypes().setAll(queen, rook, bishop, knight);
-    
-    Optional<ButtonType> result = alert.showAndWait();
-    return result.map(button -> {
-        if (button == rook) return new Rook(row, col, color);
-        if (button == bishop) return new Bishop(row, col, color);
-        if (button == knight) return new Knight(row, col, color);
-        return new Queen(row, col, color);
-    }).orElse(new Queen(row, col, color));
-}
+stockfish.close();
 ```
 
-### Check Detection
-```java
-private boolean isKingInCheck(Color kingColor) {
-    int[] kingPos = findKing(kingColor);
-    if (kingPos == null) return false;
-    
-    for (int r = 0; r < SIZE; r++) {
-        for (int c = 0; c < SIZE; c++) {
-            if (board[r][c] != null && board[r][c].color != kingColor) {
-                if (isValidMoveWithoutCheckTest(r, c, kingPos[0], kingPos[1])) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-```
+## Dependencies
 
+- Java 17+  
+- JavaFX SDK  
+- Stockfish executable  
+
+## Credits
+
+- Chess AI: [Stockfish](https://stockfishchess.org/)  
+- GUI & graphics: JavaFX  
