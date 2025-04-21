@@ -69,6 +69,12 @@ class CastlingRights {
             else blackRightRookMoved = true;
         }
     }
+    
+    public void reset() {
+        whiteKingMoved = blackKingMoved = false;
+        whiteLeftRookMoved = whiteRightRookMoved = false;
+        blackLeftRookMoved = blackRightRookMoved = false;
+    }
 }
 
 abstract class ChessPiece implements Drawable, MoveValidator {
@@ -465,6 +471,7 @@ public class ChessGame extends Application {
         selectedRow = selectedCol = -1;
         legalMoveCache.clear();
         whiteKingInCheck = blackKingInCheck = false;
+        castlingRights.reset();
         
         // Make AI's first move if player is black
         if (playingAgainstAI && !aiIsBlack) {
