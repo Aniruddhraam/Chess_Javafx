@@ -1,104 +1,111 @@
-Chess Game
-A JavaFX-based chess game application featuring AI opponents, network play, and customizable themes.
-Features
+# Chess Game
 
-Play against AI with adjustable difficulty levels (Easy, Medium, Hard, Expert).
-Play online with another player over a network.
-Customizable board themes (e.g., Classic, Blue) and dark mode.
-Flip board functionality to switch perspectives.
-Game logging and status updates.
-Pawn promotion dialog for choosing the promotion piece.
-Check and checkmate detection with visual indicators.
-Stalemate detection.
+## Table of Contents
+- [Description](#description)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Controls](#controls)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
-Screenshots
+## Description
+A fully-featured JavaFX-based Chess game offering:
+- Custom-drawn chess pieces and board UI
+- Standard chess rules (move validation, castling, en passant, pawn promotion)
+- Single-player mode against Stockfish AI with adjustable difficulty levels
+- Two-player network mode (host or join via IP & port)
+- Theme selection, dark mode, and board flipping
+- Real-time game log and status updates
 
-Installation
+## Features
+- **Custom Graphics**: Each piece is drawn programmatically with JavaFX Canvas.
+- **Rule Enforcement**: Legal move generation, check/checkmate, stalemate detection.
+- **AI Opponent**: Integrates Stockfish engine; four difficulty settings (Easy, Medium, Hard, Expert).
+- **Network Play**: Host or join games over TCP/IP; built-in chat and connection status.
+- **UI Customization**: Predefined themes, dark/light mode toggle, board flip.
+- **Game Controls**: Click-to-move interface, promotion dialog, highlighted legal moves.
+- **Responsive Layout**: Auto-adjusts board size based on screen resolution.
 
-Ensure you have the Java Development Kit (JDK) 8 or later installed.
-Download and set up the JavaFX SDK if it’s not included in your JDK.
-Clone this repository:git clone https://github.com/yourusername/chess-game.git
+## Prerequisites
+- **Java 11+**
+- **JavaFX 11+** (if not bundled with your JDK)
+- **Maven** (or Gradle) for dependency management
+- **Stockfish** engine binary in project root or system PATH
 
+## Installation
+1. **Clone repository**
 
-Navigate to the project directory:cd chess-game
+    ```bash
+    git clone https://github.com/yourusername/chess-game.git
+    cd chess-game
+    ```
 
+2. **Add Stockfish**
 
-Compile the application:javac -cp .;path/to/javafx-sdk/lib/* chesspkg/ChessGame.java
+    - Download the latest Stockfish binary for your OS.
+    - Place the `stockfish` executable in the project root (next to `pom.xml`).
 
+3. **Build**
 
-Run the application:java -cp .;path/to/javafx-sdk/lib/* chesspkg.ChessGame
+    ```bash
+    mvn clean install
+    ```
 
+## Usage
+### Running Locally
 
+```bash
+mvn javafx:run
+```
+_or_
 
-Note: Replace path/to/javafx-sdk/lib/* with the actual path to your JavaFX SDK library. On Windows, use semicolons (;) in the classpath; on Unix-based systems, use colons (:).
-Usage
+```bash
+java -jar target/chess-game.jar
+```
 
-Starting a New Game: Click the "New Game" button to reset the board and start a new game.
-Game Modes:
-Play against AI: Check the "Play against AI" checkbox and select the AI difficulty from the dropdown.
-Network Play: Enter the IP address and port to host or join a game.
+### Menu Overview
+1. **Play vs AI**: Toggle AI, select difficulty, choose playing color.  
+2. **Network**: Enter IP & port, click **Host Game** or **Join Game**.  
+3. **Theme**: Select board theme, toggle dark mode, flip board.  
+4. **New Game**: Reset board and settings.  
 
+## Configuration
+- **AI Difficulty**: Easy (depth 1), Medium (7), Hard (12), Expert (20).  
+- **Playing Color**: Choose White or Black before starting.  
+- **Network**: Default port `8888`; ensure firewall allows inbound/outbound TCP.
 
-Settings:
-Choose your player color (White or Black) from the "Play as" dropdown.
-Select a board theme from the "Board Theme" dropdown.
-Toggle dark mode with the "Toggle Dark Mode" button.
-Flip the board perspective with the "Flip Board" button.
+## Controls
+- **Select & Move**: Click a piece, legal moves highlight, click destination.  
+- **Pawn Promotion**: Dialog appears when pawn reaches last rank.  
+- **Castling**: Move king two squares toward rook when eligible.  
+- **Flip Board**: Toggle orientation for alternate viewpoints.  
+- **Dark Mode**: Toggle light/dark UI coloring.
 
+## Contributing
+1. Fork the repository.  
+2. Create a feature branch:  
+    ```bash
+    git checkout -b feature-name
+    ```  
+3. Commit your changes:  
+    ```bash
+    git commit -m "Add feature"
+    ```  
+4. Push to branch:  
+    ```bash
+    git push origin feature-name
+    ```  
+5. Open a Pull Request.
 
-Making Moves:
-Click on a piece to select it.
-Click on a valid destination square to move the piece.
-For pawn promotion, a dialog will appear to choose the promotion piece (Queen, Rook, Bishop, or Knight).
+Please adhere to the existing code style and include unit tests where applicable.
 
+## License
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-Special Moves:
-Castling: Move the king two squares towards a rook, and the rook will move to the square next to the king (if castling conditions are met).
-
-
-
-Controls
-
-Mouse Click: Select and move pieces.
-Control Panel: Adjust game settings, themes, and network options.
-
-Network Play
-
-Hosting a Game:
-Enter a port number (e.g., 8888) in the "Port" field and click "Host Game".
-Share your IP address and port with the opponent.
-
-
-Joining a Game:
-Enter the host’s IP address and port in the respective fields, then click "Join Game".
-
-
-
-AI Opponent
-
-The AI uses the Stockfish chess engine.
-Adjust the difficulty level via the "AI Difficulty" dropdown to change the AI’s search depth:
-Easy: Depth 1
-Medium: Depth 7
-Hard: Depth 12
-Expert: Depth 20
-
-
-
-Themes and Customization
-
-Board Themes: Choose from predefined themes like Classic, Blue, etc., via the "Board Theme" dropdown.
-Dark Mode: Toggle between light and dark modes using the "Toggle Dark Mode" button.
-
-Development
-
-Contributions are welcome! Please fork the repository and submit pull requests.
-Report issues or suggest features via the GitHub issues page.
-
-License
-This project is licensed under the MIT License.
-Acknowledgements
-
-Stockfish Chess Engine for AI functionality.
-JavaFX for the graphical user interface.
-
+## Acknowledgments
+- [Stockfish](https://stockfishchess.org/) for the powerful open-source chess engine.  
+- JavaFX community for tutorials and support.
