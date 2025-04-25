@@ -13,7 +13,6 @@ public class NetworkChessManager {
     private ExecutorService executor;
     private boolean isConnected = false;
     private boolean isServer = false;
-    private ChessGame game;
     
     // Callback interface for game events
     public interface GameEventListener {
