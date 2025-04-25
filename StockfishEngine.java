@@ -3,7 +3,6 @@ package chesspkg;
 import java.io.*;
 import java.util.concurrent.TimeUnit;
 import javafx.scene.paint.Color;
-import javafx.geometry.Point2D;
 
 public class StockfishEngine {
     private Process engineProcess;

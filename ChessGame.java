@@ -6,6 +6,7 @@ import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Point2D;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -20,6 +21,7 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.scene.input.MouseEvent;
@@ -34,6 +36,11 @@ import java.util.Optional;
 import java.util.Set;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.ScrollPane;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 interface Drawable {
     void draw(GraphicsContext gc, int x, int y);
@@ -232,33 +239,58 @@ public class ChessGame extends Application {
     private boolean aiIsBlack = true; // AI plays as black
     private ComboBox<String> difficultyComboBox;
     private ComboBox<String> playerColorComboBox;
+    
+    private ComboBox<ChessTheme> themeComboBox;
+    private ChessTheme currentTheme;
+    
+    private boolean darkModeEnabled = false;
+    private Button darkModeButton;
+    private BorderPane root;
+    
+    private NetworkChessManager networkManager;
+    private boolean playingOnline = false;
+    private boolean isMyTurn = true;
+    private TextArea gameLogArea;
+    private TextField ipAddressField;
+    private TextField portField;
+    private HBox connectionBox;
+    
+    // Colors for the background dark theme
+    private static final Color DARK_INDIGO = Color.web("#1A1A2E");
+    private static final Color DARK_TEXT = Color.web("#E0E0E0");
+    private static final Color DARK_CONTROL_BG = Color.web("#16213E");
+    private static final Color LIGHT_BG = Color.web("#F5F5F5");
+    private static final Color LIGHT_TEXT = Color.BLACK;
+    private Button flipBoardButton;
 
     @Override
     public void start(Stage primaryStage) {
+        // Existing initialization code (Stockfish, screen size, etc.) remains unchanged
         primaryStage.setTitle("Chess Game");
-        
-        // Initialize Stockfish engine
         stockfish = new StockfishEngine();
-        
-        // Get screen dimensions
         Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
         double screenHeight = screenBounds.getHeight();
         double screenWidth = screenBounds.getWidth();
-        
-        // Calculate optimal square size based on screen height
-        // Leave some space for status label and padding
         int optimalSquareSize = (int)((screenHeight - 100) / SIZE);
         SQUARE_SIZE = optimalSquareSize;
-        
-        BorderPane root = new BorderPane();
+
+        root = new BorderPane();
         root.setPadding(new Insets(10));
+
+        // Top: Status Label
         statusLabel = new Label("White's turn");
-        statusLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 14));
-        root.setTop(statusLabel);
+        statusLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 20));
+        HBox topBox = new HBox(statusLabel);
+        topBox.setAlignment(Pos.CENTER);
+        topBox.setPadding(new Insets(10));
+        root.setTop(topBox);
+
+        // Center: Chessboard
         chessBoard = new ChessBoard();
         chessBoard.setCache(true);
         root.setCenter(chessBoard);
-        
+
+        // King flash animation setup (unchanged)
         kingFlashAnimation = new Timeline(new KeyFrame(Duration.seconds(0.5), e -> {
             if (chessBoard != null) {
                 chessBoard.toggleKingHighlight();
@@ -266,12 +298,20 @@ public class ChessGame extends Application {
         }));
         kingFlashAnimation.setCycleCount(Timeline.INDEFINITE);
         kingFlashAnimation.setAutoReverse(true);
-        
-        // Add UI elements for AI control
+
+        // Right: Control Panel
+        VBox controlPanel = new VBox(10);
+        controlPanel.setPadding(new Insets(10));
+        controlPanel.setAlignment(Pos.TOP_CENTER);
+        controlPanel.setPrefWidth(300); // Set a reasonable width
+
+        // Game Settings
+        Label gameSettingsLabel = new Label("Game Settings");
+        gameSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 14));
         CheckBox aiCheckBox = new CheckBox("Play against AI");
         aiCheckBox.setSelected(playingAgainstAI);
         aiCheckBox.setOnAction(e -> playingAgainstAI = aiCheckBox.isSelected());
-        
+        Label difficultyLabel = new Label("AI Difficulty:");
         difficultyComboBox = new ComboBox<>();
         difficultyComboBox.getItems().addAll("Easy", "Medium", "Hard", "Expert");
         difficultyComboBox.setValue("Medium");
@@ -284,7 +324,7 @@ public class ChessGame extends Application {
                 case "Expert": stockfish.setSearchDepth(20); break;
             }
         });
-        
+        Label colorLabel = new Label("Play as:");
         playerColorComboBox = new ComboBox<>();
         playerColorComboBox.getItems().addAll("White", "Black");
         playerColorComboBox.setValue("White");
@@ -292,39 +332,219 @@ public class ChessGame extends Application {
             aiIsBlack = "White".equals(playerColorComboBox.getValue());
             resetGame();
         });
-        
-        Label difficultyLabel = new Label("AI Difficulty:");
-        Label colorLabel = new Label("Play as:");
         Button resetButton = new Button("New Game");
         resetButton.setOnAction(e -> resetGame());
-        
-        HBox controlsBox = new HBox(10, aiCheckBox, difficultyLabel, difficultyComboBox, colorLabel, playerColorComboBox, resetButton);
-        controlsBox.setPadding(new Insets(5, 0, 5, 0));
-        controlsBox.setAlignment(javafx.geometry.Pos.CENTER);
-        root.setBottom(controlsBox);
-        
-        // Create scene with screen dimensions
-        Scene scene = new Scene(root, screenWidth * 0.9, screenHeight * 0.9);
-        primaryStage.setScene(scene);
-        primaryStage.setMaximized(true);
-        
-        Button flipBoardButton = new Button("Flip Board");
+        HBox gameSettings = new HBox(10, aiCheckBox, difficultyLabel, difficultyComboBox,
+                colorLabel, playerColorComboBox, resetButton);
+        gameSettings.setAlignment(Pos.CENTER_LEFT);
+
+        // Theme Settings
+        Label themeSettingsLabel = new Label("Theme Settings");
+        themeSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 14));
+        currentTheme = ChessTheme.PREDEFINED_THEMES[0];
+        Label themeLabel = new Label("Board Theme:");
+        themeLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 14));
+        themeComboBox = new ComboBox<>();
+        themeComboBox.getItems().addAll(ChessTheme.PREDEFINED_THEMES);
+        themeComboBox.setValue(currentTheme);
+        themeComboBox.setOnAction(e -> {
+            currentTheme = themeComboBox.getValue();
+            chessBoard.draw();
+        });
+        themeComboBox.setStyle("-fx-font-size: 14pt;");
+        darkModeButton = new Button("Toggle Dark Mode");
+        darkModeButton.setOnAction(e -> toggleDarkMode());
+        darkModeButton.setStyle("-fx-font-size: 14pt;");
+        flipBoardButton = new Button("Flip Board");
         flipBoardButton.setOnAction(e -> {
             boardFlipped = !boardFlipped;
             chessBoard.draw();
         });
-        controlsBox.getChildren().add(flipBoardButton);
-        
+        flipBoardButton.setStyle("-fx-font-size: 14pt;");
+        HBox themeSettings = new HBox(10, themeLabel, themeComboBox, darkModeButton, flipBoardButton);
+        themeSettings.setAlignment(Pos.CENTER_LEFT);
+
+        // Network Settings (created in initializeNetworkControls)
+        Label networkSettingsLabel = new Label("Network Settings");
+        networkSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 14));
+
+        // Add sections to control panel (connectionBox added after initialization)
+        controlPanel.getChildren().addAll(gameSettingsLabel, gameSettings, themeSettingsLabel, themeSettings,
+                networkSettingsLabel);
+
+        root.setRight(controlPanel);
+
+        // Bottom: Game Log (initialized later)
+        initializeNetworkControls();
+		controlPanel.getChildren().add(connectionBox);
+        ScrollPane logScrollPane = new ScrollPane(gameLogArea);
+        logScrollPane.setFitToWidth(true);
+        logScrollPane.setFitToHeight(true);
+        root.setBottom(logScrollPane);
+
+        // Scene setup (unchanged)
+        Scene scene = new Scene(root, screenWidth * 0.9, screenHeight * 0.9);
+        primaryStage.setScene(scene);
+        primaryStage.setMaximized(true);
+
+        applyTheme(false);
         initializeBoard();
         initializePieceImages();
         chessBoard.draw();
-        
-        // If AI starts as white, make the first move
         if (playingAgainstAI && !aiIsBlack) {
             makeAIMove();
         }
-        
         primaryStage.show();
+    }
+
+    private void initializeNetworkControls() {
+        ipAddressField = new TextField();
+        ipAddressField.setPromptText("IP Address");
+        portField = new TextField("8888");
+        portField.setPromptText("Port");
+        Button hostButton = new Button("Host Game");
+        hostButton.setOnAction(e -> startHosting());
+        Button joinButton = new Button("Join Game");
+        joinButton.setOnAction(e -> joinGame());
+        connectionBox = new HBox(10, new Label("IP:"), ipAddressField, new Label("Port:"), portField, hostButton, joinButton);
+        connectionBox.setAlignment(Pos.CENTER);
+
+        gameLogArea = new TextArea();
+        gameLogArea.setEditable(false);
+        gameLogArea.setPrefHeight(150);
+
+        networkManager = new NetworkChessManager(this);
+        networkManager.setEventListener(new NetworkEventHandler());
+        try {
+            String localIp = InetAddress.getLocalHost().getHostAddress();
+            ipAddressField.setText(localIp);
+        } catch (UnknownHostException ex) {
+            ipAddressField.setText("localhost");
+        }
+    }
+    
+    private class NetworkEventHandler implements NetworkChessManager.GameEventListener {
+        @Override
+        public void onMoveReceived(int startRow, int startCol, int endRow, int endCol, char promotionType) {
+            movePiece(startRow, startCol, endRow, endCol, promotionType);
+            updateCheckStatus();
+            chessBoard.draw();
+            isMyTurn = true;
+        }
+
+        @Override
+        public void onConnectionEstablished(boolean isWhite) {
+            isMyTurn = isWhite; // Server (white) goes first
+            resetGame();
+        }
+
+        @Override
+        public void onConnectionLost() {
+            playingOnline = false;
+            isMyTurn = true;
+            logGameMessage("Connection lost. Returning to local play.");
+        }
+
+        @Override
+        public void onGameMessage(String message) {
+            logGameMessage(message);
+        }
+    }
+
+
+    // Update the applyTheme method to incorporate the new style elements
+    private void applyTheme(boolean darkMode) {
+        if (darkMode) {
+            // Apply dark theme
+            root.setStyle("-fx-background-color: #1A1A2E;");
+            statusLabel.setStyle("-fx-text-fill: #E0E0E0; -fx-font-size: 20pt;");
+            
+            // Style right panel controls
+            VBox rightPanel = (VBox) root.getRight();
+            for (Node node : rightPanel.getChildren()) {
+                applyNodeStyle(node, true);
+            }
+
+            // Style bottom scroll pane content
+            ScrollPane logScrollPane = (ScrollPane) root.getBottom();
+            if (logScrollPane.getContent() instanceof TextArea) {
+                TextArea logArea = (TextArea) logScrollPane.getContent();
+                logArea.setStyle("-fx-control-inner-background: #1A1A2E; -fx-text-fill: #E0E0E0;");
+            }
+
+            darkModeButton.setText("Toggle Light Mode");
+        } else {
+            // Apply light theme
+            root.setStyle("-fx-background-color: #F5F5F5;");
+            statusLabel.setStyle("-fx-text-fill: black; -fx-font-size: 20pt;");
+            
+            // Reset right panel styles
+            VBox rightPanel = (VBox) root.getRight();
+            for (Node node : rightPanel.getChildren()) {
+                applyNodeStyle(node, false);
+            }
+
+            // Reset bottom scroll pane content style
+            ScrollPane logScrollPane = (ScrollPane) root.getBottom();
+            if (logScrollPane.getContent() instanceof TextArea) {
+                TextArea logArea = (TextArea) logScrollPane.getContent();
+                logArea.setStyle("");
+            }
+
+            darkModeButton.setText("Toggle Dark Mode");
+        }
+    }
+
+    // Helper method to apply styles recursively
+    private void applyNodeStyle(Node node, boolean darkMode) {
+        if (node instanceof HBox) {
+            HBox hbox = (HBox) node;
+            for (Node subNode : hbox.getChildren()) {
+                applyNodeStyle(subNode, darkMode);
+            }
+        } else if (node instanceof Button) {
+            Button btn = (Button) node;
+            if (darkMode) {
+                btn.setStyle("-fx-background-color: #16213E; -fx-text-fill: #E0E0E0; -fx-font-size: 14pt;");
+            } else {
+                btn.setStyle("-fx-font-size: 14pt;");
+            }
+        } else if (node instanceof Label) {
+            Label lbl = (Label) node;
+            if (darkMode) {
+                lbl.setStyle("-fx-text-fill: #E0E0E0; -fx-font-size: 14pt;");
+            } else {
+                lbl.setStyle("-fx-font-size: 14pt;");
+            }
+        } else if (node instanceof ComboBox) {
+            ComboBox<?> cb = (ComboBox<?>) node;
+            if (darkMode) {
+                cb.setStyle("-fx-background-color: #D2B48C; " +
+                           "-fx-text-fill: #000000; " +
+                           "-fx-prompt-text-fill: #333333; " +
+                           "-fx-control-inner-background: #F5DEB3; " +
+                           "-fx-selection-bar: #BFA67A; " +
+                           "-fx-selection-bar-text-fill: #000000; " +
+                           "-fx-cell-hover-color: #E6CCB2; " +
+                           "-fx-font-size: 14pt;");
+            } else {
+                cb.setStyle("-fx-font-size: 14pt;");
+            }
+        } else if (node instanceof TextField) {
+            TextField tf = (TextField) node;
+            if (darkMode) {
+                tf.setStyle("-fx-background-color: #16213E; " +
+                           "-fx-text-fill: #E0E0E0; " +
+                           "-fx-prompt-text-fill: #666666;");
+            } else {
+                tf.setStyle("");
+            }
+        }
+    }
+    
+    private void toggleDarkMode() {
+        darkModeEnabled = !darkModeEnabled;
+        applyTheme(darkModeEnabled);
     }
 
     private void initializeBoard() {
@@ -488,6 +708,12 @@ public class ChessGame extends Application {
         if (stockfish != null) {
             stockfish.close();
         }
+        
+        // Clean up network resources
+        if (networkManager != null) {
+            networkManager.cleanup();
+        }
+        
         super.stop();
     }
     
@@ -612,11 +838,20 @@ public class ChessGame extends Application {
         }
         
         switchTurn();
-        return true;
+        if (playingOnline && isConnected()) {
+            networkManager.sendMove(startRow, startCol, endRow, endCol, promotionType);
+            isMyTurn = false; // Wait for opponent's move
+        }
+        
+        // Return the result from the original implementation
+        return true; // or the actual result
     }
     
     private void switchTurn() {
         whiteTurn = !whiteTurn;
+        if (playingOnline) {
+            isMyTurn = !isMyTurn;
+        }
         statusLabel.setText(whiteTurn ? "White's turn" : "Black's turn");
         
         // If it's AI's turn, make AI move after a short delay
@@ -819,6 +1054,11 @@ public class ChessGame extends Application {
             return;
         }
         
+        // In online play, only allow clicks if it's the player's turn
+        if (playingOnline && !isMyTurn) {
+            return;
+        }
+        
         if (selectedRow == -1 && selectedCol == -1) {
             // No piece selected yet
             ChessPiece piece = board[row][col];
@@ -968,6 +1208,48 @@ public class ChessGame extends Application {
             chessBoard.draw();
         }
     }
+    private void startHosting() {
+        try {
+            int port = Integer.parseInt(portField.getText());
+            resetGame();
+            playingOnline = true;
+            playingAgainstAI = false;
+            whiteTurn = true;  // Host plays as white
+            isMyTurn = true;
+            networkManager.startServer(port);
+            logGameMessage("Starting server on port " + port);
+            logGameMessage("Waiting for opponent to connect...");
+        } catch (NumberFormatException e) {
+            logGameMessage("Invalid port number");
+        }
+    }
+    
+    private void joinGame() {
+        try {
+            String address = ipAddressField.getText();
+            int port = Integer.parseInt(portField.getText());
+            resetGame();
+            playingOnline = true;
+            playingAgainstAI = false;
+            whiteTurn = true;  // Game starts with white's turn
+            isMyTurn = false;  // Client plays as black, waits for first move
+            networkManager.connectToServer(address, port);
+            logGameMessage("Connecting to " + address + ":" + port);
+        } catch (NumberFormatException e) {
+            logGameMessage("Invalid port number");
+        }
+    }
+
+    private void logGameMessage(String message) {
+        if (gameLogArea != null) {
+            gameLogArea.appendText(message + "\n");
+        }
+    }
+    
+    private boolean isConnected() {
+        return networkManager != null && networkManager.isConnected();
+    }
+    
     
     private class ChessBoard extends StackPane {
         private Canvas canvas;
@@ -1004,6 +1286,13 @@ public class ChessGame extends Application {
         void draw() {
             gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
             
+            // Draw border around the board
+            gc.setFill(currentTheme.getBoardBorder());
+            double borderSize = SQUARE_SIZE * 0.1;
+            gc.fillRect(-borderSize, -borderSize, 
+                        SIZE * SQUARE_SIZE + 2 * borderSize, 
+                        SIZE * SQUARE_SIZE + 2 * borderSize);
+            
             // Draw the board
             for (int row = 0; row < SIZE; row++) {
                 for (int col = 0; col < SIZE; col++) {
@@ -1012,7 +1301,10 @@ public class ChessGame extends Application {
                     int visualCol = boardFlipped ? (SIZE - 1 - col) : col;
                     
                     boolean isLight = (row + col) % 2 == 0;
-                    gc.setFill(isLight ? Color.BEIGE : Color.DARKGREEN);
+                    gc.setFill(isLight ? currentTheme.getLightSquare() : currentTheme.getDarkSquare());
+                    
+                    Color textColor = isLight ? currentTheme.getDarkSquare() : currentTheme.getLightSquare();
+                    gc.setFill(textColor);
                     
                     // Highlight selected square
                     if (row == selectedRow && col == selectedCol) {
@@ -1021,7 +1313,12 @@ public class ChessGame extends Application {
                     
                     // Highlight legal moves
                     if (legalMoveCache.contains(new Point2D(row, col))) {
-                        gc.setFill(Color.LIGHTBLUE);
+                        // Use golden highlight for blue theme, keep lightblue for other themes
+                        if (currentTheme.getName().equalsIgnoreCase("Blue")) {
+                            gc.setFill(Color.GOLD);  // Or use Color.web("#FFD700") for true gold
+                        } else {
+                            gc.setFill(Color.LIGHTBLUE);
+                        }
                     }
                     
                     // Highlight king in check
