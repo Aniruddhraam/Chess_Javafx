@@ -273,6 +273,9 @@ public class ChessGame extends Application {
         int optimalSquareSize = (int)((screenHeight - 100) / SIZE);
         SQUARE_SIZE = optimalSquareSize;
 
+        // Initialize currentTheme before it's used
+        currentTheme = ChessTheme.PREDEFINED_THEMES[0]; // Default to Classic theme
+
         root = new BorderPane();
         root.setPadding(new Insets(10));
 
@@ -302,9 +305,21 @@ public class ChessGame extends Application {
 
         Label gameSettingsLabel = new Label("Game Settings");
         gameSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 16));
+     // Create vertical layout for game settings instead of one horizontal box
+        VBox gameSettingsBox = new VBox(10);
+        gameSettingsBox.setAlignment(Pos.CENTER_LEFT);
+
+        // First row: AI checkbox
+        HBox aiBox = new HBox(10);
+        aiBox.setAlignment(Pos.CENTER_LEFT);
         CheckBox aiCheckBox = new CheckBox("Play against AI");
         aiCheckBox.setSelected(playingAgainstAI);
         aiCheckBox.setOnAction(e -> playingAgainstAI = aiCheckBox.isSelected());
+        aiBox.getChildren().add(aiCheckBox);
+
+        // Second row: AI Difficulty
+        HBox difficultyBox = new HBox(10);
+        difficultyBox.setAlignment(Pos.CENTER_LEFT);
         Label difficultyLabel = new Label("AI Difficulty:");
         difficultyComboBox = new ComboBox<>();
         difficultyComboBox.getItems().addAll("Easy", "Medium", "Hard", "Expert");
@@ -318,6 +333,11 @@ public class ChessGame extends Application {
                 case "Expert": stockfish.setSearchDepth(20); break;
             }
         });
+        difficultyBox.getChildren().addAll(difficultyLabel, difficultyComboBox);
+
+        // Third row: Player color selection
+        HBox colorBox = new HBox(10);
+        colorBox.setAlignment(Pos.CENTER_LEFT);
         Label colorLabel = new Label("Play as:");
         playerColorComboBox = new ComboBox<>();
         playerColorComboBox.getItems().addAll("White", "Black");
@@ -326,17 +346,31 @@ public class ChessGame extends Application {
             aiIsBlack = "White".equals(playerColorComboBox.getValue());
             resetGame();
         });
-        Button resetButton = new Button("New Game");
-        resetButton.setOnAction(e -> resetGame());
-        HBox gameSettings = new HBox(10, aiCheckBox, difficultyLabel, difficultyComboBox,
-                colorLabel, playerColorComboBox, resetButton);
-        gameSettings.setAlignment(Pos.CENTER_LEFT);
+        colorBox.getChildren().addAll(colorLabel, playerColorComboBox);
 
+        // Fourth row: Reset button
+        HBox resetBox = new HBox(10);
+        resetBox.setAlignment(Pos.CENTER_LEFT);
+        Button resetButton = new Button("New Game");
+        resetButton.setPrefWidth(150);
+        resetButton.setOnAction(e -> resetGame());
+        resetBox.getChildren().add(resetButton);
+
+        // Add all rows to the game settings section
+        gameSettingsBox.getChildren().addAll(aiBox, difficultyBox, colorBox, resetBox);
+
+        // Theme Settings Section
         Label themeSettingsLabel = new Label("Theme Settings");
-        themeSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 14));
-        currentTheme = ChessTheme.PREDEFINED_THEMES[0];
+        themeSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 16));
+
+        // Create vertical layout for theme settings
+        VBox themeSettingsBox = new VBox(10);
+        themeSettingsBox.setAlignment(Pos.CENTER_LEFT);
+
+        // First row: Theme selector
+        HBox themeBox = new HBox(10);
+        themeBox.setAlignment(Pos.CENTER_LEFT);
         Label themeLabel = new Label("Board Theme:");
-        themeLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 14));
         themeComboBox = new ComboBox<>();
         themeComboBox.getItems().addAll(ChessTheme.PREDEFINED_THEMES);
         themeComboBox.setValue(currentTheme);
@@ -344,24 +378,77 @@ public class ChessGame extends Application {
             currentTheme = themeComboBox.getValue();
             chessBoard.draw();
         });
-        themeComboBox.setStyle("-fx-font-size: 14pt;");
+        themeComboBox.setPrefWidth(150);
+        themeBox.getChildren().addAll(themeLabel, themeComboBox);
+
+        // Second row: Dark mode button
+        HBox darkModeBox = new HBox(10);
+        darkModeBox.setAlignment(Pos.CENTER_LEFT);
         darkModeButton = new Button("Toggle Dark Mode");
+        darkModeButton.setPrefWidth(150);
         darkModeButton.setOnAction(e -> toggleDarkMode());
-        darkModeButton.setStyle("-fx-font-size: 14pt;");
+        darkModeBox.getChildren().add(darkModeButton);
+
+        // Third row: Flip board button
+        HBox flipBoardBox = new HBox(10);
+        flipBoardBox.setAlignment(Pos.CENTER_LEFT);
         flipBoardButton = new Button("Flip Board");
+        flipBoardButton.setPrefWidth(150);
         flipBoardButton.setOnAction(e -> {
             boardFlipped = !boardFlipped;
             chessBoard.draw();
         });
-        flipBoardButton.setStyle("-fx-font-size: 14pt;");
-        HBox themeSettings = new HBox(10, themeLabel, themeComboBox, darkModeButton, flipBoardButton);
-        themeSettings.setAlignment(Pos.CENTER_LEFT);
+        flipBoardBox.getChildren().add(flipBoardButton);
 
+        // Add all rows to the theme settings section
+        themeSettingsBox.getChildren().addAll(themeBox, darkModeBox, flipBoardBox);
+
+        // Network Settings Section
         Label networkSettingsLabel = new Label("Network Settings");
-        networkSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 14));
+        networkSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 16));
 
-        controlPanel.getChildren().addAll(gameSettingsLabel, gameSettings, themeSettingsLabel, themeSettings,
-                networkSettingsLabel);
+        // Create vertical layout for network settings
+        VBox networkSettingsBox = new VBox(10);
+        networkSettingsBox.setAlignment(Pos.CENTER_LEFT);
+
+        // IP address row
+        HBox ipBox = new HBox(10);
+        ipBox.setAlignment(Pos.CENTER_LEFT);
+        Label ipLabel = new Label("IP Address:");
+        ipAddressField = new TextField();
+        ipAddressField.setPrefWidth(150);
+        ipAddressField.setPromptText("IP Address");
+        ipBox.getChildren().addAll(ipLabel, ipAddressField);
+
+        // Port row
+        HBox portBox = new HBox(10);
+        portBox.setAlignment(Pos.CENTER_LEFT);
+        Label portLabel = new Label("Port:");
+        portField = new TextField("8888");
+        portField.setPrefWidth(150);
+        portField.setPromptText("Port");
+        portBox.getChildren().addAll(portLabel, portField);
+
+        // Connection buttons row
+        HBox connectionButtonsBox = new HBox(10);
+        connectionButtonsBox.setAlignment(Pos.CENTER_LEFT);
+        Button hostButton = new Button("Host Game");
+        hostButton.setPrefWidth(130);
+        hostButton.setOnAction(e -> startHosting());
+        Button joinButton = new Button("Join Game");
+        joinButton.setPrefWidth(130);
+        joinButton.setOnAction(e -> joinGame());
+        connectionButtonsBox.getChildren().addAll(hostButton, joinButton);
+
+        // Add all network control rows
+        networkSettingsBox.getChildren().addAll(ipBox, portBox, connectionButtonsBox);
+
+        // Add all sections to the control panel
+        controlPanel.getChildren().addAll(
+            gameSettingsLabel, gameSettingsBox,
+            themeSettingsLabel, themeSettingsBox,
+            networkSettingsLabel, networkSettingsBox
+        );
 
         root.setRight(controlPanel);
 
@@ -369,7 +456,7 @@ public class ChessGame extends Application {
         controlPanel.getChildren().add(connectionBox);
         ScrollPane logScrollPane = new ScrollPane(gameLogArea);
         logScrollPane.setFitToWidth(true);
-        logScrollPane.setFitToHeight(true);
+        logScrollPane.setPrefHeight(120);
         root.setBottom(logScrollPane);
 
         Scene scene = new Scene(root, screenWidth * 0.9, screenHeight * 0.9);
@@ -395,12 +482,12 @@ public class ChessGame extends Application {
         hostButton.setOnAction(e -> startHosting());
         Button joinButton = new Button("Join Game");
         joinButton.setOnAction(e -> joinGame());
-        connectionBox = new HBox(10, new Label("IP:"), ipAddressField, new Label("Port:"), portField, hostButton, joinButton);
+        connectionBox = new HBox();
         connectionBox.setAlignment(Pos.CENTER);
 
         gameLogArea = new TextArea();
         gameLogArea.setEditable(false);
-        gameLogArea.setPrefHeight(150);
+        gameLogArea.setPrefHeight(100);
 
         networkManager = new NetworkChessManager(this);
         networkManager.setEventListener(new NetworkEventHandler());
