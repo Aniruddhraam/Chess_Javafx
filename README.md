@@ -104,7 +104,7 @@ java -jar target/chess-game.jar
 Please adhere to the existing code style and include unit tests where applicable.
 
 ## License
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License.
 
 ## Acknowledgments
 - [Stockfish](https://stockfishchess.org/) for the powerful open-source chess engine.  
