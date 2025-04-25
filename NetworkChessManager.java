@@ -5,6 +5,11 @@ import java.net.*;
 import java.util.concurrent.*;
 import javafx.application.Platform;
 
+/**
+ * Manages network communications for a multiplayer chess game.
+ * Handles server creation, client connections, and transmitting chess moves
+ * between players over a network.
+ */
 public class NetworkChessManager {
     private ServerSocket serverSocket;
     private Socket clientSocket;
@@ -15,34 +20,88 @@ public class NetworkChessManager {
     private boolean isServer = false;
     private ChessGame game;
     
-    // Callback interface for game events
+    /**
+     * Interface for game event callbacks.
+     * Implementers can receive notifications about network events and game state changes.
+     */
     public interface GameEventListener {
+        /**
+         * Called when a move is received from the opponent.
+         * 
+         * @param startRow The starting row of the move
+         * @param startCol The starting column of the move
+         * @param endRow The destination row of the move
+         * @param endCol The destination column of the move
+         * @param promotionType The piece type for pawn promotion, or 0 if not a promotion
+         */
         void onMoveReceived(int startRow, int startCol, int endRow, int endCol, char promotionType);
+        
+        /**
+         * Called when a connection with another player is established.
+         * 
+         * @param isWhite Whether this player will play as white
+         */
         void onConnectionEstablished(boolean isWhite);
+        
+        /**
+         * Called when the connection with the opponent is lost.
+         */
         void onConnectionLost();
+        
+        /**
+         * Called when there is a game-related message to display.
+         * 
+         * @param message The message to display
+         */
         void onGameMessage(String message);
     }
     
     private GameEventListener listener;
     
+    /**
+     * Creates a new NetworkChessManager.
+     * 
+     * @param game The ChessGame instance that this network manager will control
+     */
     public NetworkChessManager(ChessGame game) {
         this.game = game;
         this.executor = Executors.newCachedThreadPool();
     }
     
+    /**
+     * Sets the event listener for network and game events.
+     * 
+     * @param listener The listener to receive event callbacks
+     */
     public void setEventListener(GameEventListener listener) {
         this.listener = listener;
     }
     
+    /**
+     * Checks if the manager is currently connected to another player.
+     * 
+     * @return true if connected, false otherwise
+     */
     public boolean isConnected() {
         return isConnected;
     }
     
+    /**
+     * Checks if this instance is acting as the server.
+     * 
+     * @return true if this is the server, false if it's a client
+     */
     public boolean isServer() {
         return isServer;
     }
     
-    // Start a server on the specified port
+    /**
+     * Starts a chess server on the specified port.
+     * The server will wait for a client to connect and then establish
+     * a game connection. The server always plays as white.
+     * 
+     * @param port The port number to listen on
+     */
     public void startServer(int port) {
         isServer = true;
         executor.submit(() -> {
@@ -77,7 +136,13 @@ public class NetworkChessManager {
         });
     }
     
-    // Connect to a server at the specified address and port
+    /**
+     * Connects to a chess server at the specified address and port.
+     * The client always plays as black.
+     * 
+     * @param address The server's IP address or hostname
+     * @param port The server's port number
+     */
     public void connectToServer(String address, int port) {
         isServer = false;
         executor.submit(() -> {
@@ -110,14 +175,27 @@ public class NetworkChessManager {
         });
     }
     
-    // Set up input and output streams
+    /**
+     * Sets up input and output streams for network communication.
+     * This method must be called after establishing a connection.
+     * 
+     * @throws IOException If an I/O error occurs during stream creation
+     */
     private void setupStreams() throws IOException {
         outputStream = new ObjectOutputStream(clientSocket.getOutputStream());
         outputStream.flush();
         inputStream = new ObjectInputStream(clientSocket.getInputStream());
     }
     
-    // Send a move to the opponent
+    /**
+     * Sends a chess move to the opponent.
+     * 
+     * @param startRow The starting row of the move
+     * @param startCol The starting column of the move
+     * @param endRow The destination row of the move
+     * @param endCol The destination column of the move
+     * @param promotionType The piece type for pawn promotion, or 0 if not a promotion
+     */
     public void sendMove(int startRow, int startCol, int endRow, int endCol, char promotionType) {
         if (!isConnected) return;
         
@@ -132,7 +210,10 @@ public class NetworkChessManager {
         });
     }
     
-    // Start receiving messages from the opponent
+    /**
+     * Starts a background thread to receive moves from the opponent.
+     * This method should be called after connection is established.
+     */
     private void startReceiving() {
         executor.submit(() -> {
             try {
@@ -160,7 +241,10 @@ public class NetworkChessManager {
         });
     }
     
-    // Handle disconnection events
+    /**
+     * Handles disconnection events by updating status
+     * and notifying listeners.
+     */
     private void handleDisconnection() {
         Platform.runLater(() -> {
             isConnected = false;
@@ -173,7 +257,10 @@ public class NetworkChessManager {
         cleanup();
     }
     
-    // Clean up resources
+    /**
+     * Cleans up resources used by the network connection.
+     * Should be called when the game ends or when disconnected.
+     */
     public void cleanup() {
         isConnected = false;
         
@@ -187,7 +274,13 @@ public class NetworkChessManager {
         }
     }
     
-    // Get local IP address to display for server host
+    /**
+     * Gets the local IP address of this machine.
+     * Useful for displaying to the user so they can share it
+     * with their opponent.
+     * 
+     * @return The local IP address as a string
+     */
     private String getLocalIpAddress() {
         try {
             return InetAddress.getLocalHost().getHostAddress();
@@ -196,16 +289,37 @@ public class NetworkChessManager {
         }
     }
     
-    // Class to represent a chess move for network transmission
+    /**
+     * Represents a chess move for network transmission.
+     * This class is serializable to allow sending over object streams.
+     */
     public static class ChessMove implements Serializable {
         private static final long serialVersionUID = 1L;
         
+        /** The starting row of the move */
         public int startRow;
+        
+        /** The starting column of the move */
         public int startCol;
+        
+        /** The destination row of the move */
         public int endRow;
+        
+        /** The destination column of the move */
         public int endCol;
+        
+        /** The piece type for pawn promotion, or 0 if not a promotion */
         public char promotionType;
         
+        /**
+         * Creates a new chess move.
+         * 
+         * @param startRow The starting row of the move
+         * @param startCol The starting column of the move
+         * @param endRow The destination row of the move
+         * @param endCol The destination column of the move
+         * @param promotionType The piece type for pawn promotion, or 0 if not a promotion
+         */
         public ChessMove(int startRow, int startCol, int endRow, int endCol, char promotionType) {
             this.startRow = startRow;
             this.startCol = startCol;
