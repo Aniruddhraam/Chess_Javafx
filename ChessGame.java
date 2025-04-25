@@ -39,6 +39,8 @@ import javafx.stage.Screen;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -256,23 +258,24 @@ public class ChessGame extends Application {
     private TextField portField;
     private HBox connectionBox;
     
-    private static final Color DARK_INDIGO = Color.web("#1A1A2E");
-    private static final Color DARK_TEXT = Color.web("#E0E0E0");
-    private static final Color DARK_CONTROL_BG = Color.web("#16213E");
-    private static final Color LIGHT_BG = Color.web("#F5F5F5");
-    private static final Color LIGHT_TEXT = Color.BLACK;
     private Button flipBoardButton;
 
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Chess Game");
         stockfish = new StockfishEngine();
+        
+        // Get the screen size
         Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
-        double screenHeight = screenBounds.getHeight();
-        double screenWidth = screenBounds.getWidth();
-        int optimalSquareSize = (int)((screenHeight - 100) / SIZE);
+        double screenHeight = screenBounds.getHeight(); // 1080
+        double screenWidth = screenBounds.getWidth();   // 1920
+        
+        // Optimal calculations for 1920x1080
+        // Calculate square size based on available height, accounting for padding and controls
+        int availableHeight = (int)(screenHeight - 150); // Leave space for UI controls
+        int optimalSquareSize = Math.min(availableHeight / SIZE, 80); // Cap at 80px per square
         SQUARE_SIZE = optimalSquareSize;
-
+        
         // Initialize currentTheme before it's used
         currentTheme = ChessTheme.PREDEFINED_THEMES[0]; // Default to Classic theme
 
@@ -283,13 +286,19 @@ public class ChessGame extends Application {
         statusLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 20));
         HBox topBox = new HBox(statusLabel);
         topBox.setAlignment(Pos.CENTER);
-        topBox.setPadding(new Insets(10));
+        topBox.setPadding(new Insets(5));
         root.setTop(topBox);
 
         chessBoard = new ChessBoard();
         chessBoard.setCache(true);
-        root.setCenter(chessBoard);
-
+        
+        // Center the chess board with proper padding
+        StackPane centerPane = new StackPane();
+        centerPane.setPadding(new Insets(10));
+        centerPane.getChildren().add(chessBoard);
+        root.setCenter(centerPane);
+        
+        // Configure animation for king in check
         kingFlashAnimation = new Timeline(new KeyFrame(Duration.seconds(0.5), e -> {
             if (chessBoard != null) {
                 chessBoard.toggleKingHighlight();
@@ -298,15 +307,18 @@ public class ChessGame extends Application {
         kingFlashAnimation.setCycleCount(Timeline.INDEFINITE);
         kingFlashAnimation.setAutoReverse(true);
 
-        VBox controlPanel = new VBox(20);
-        controlPanel.setPadding(new Insets(20));
+        // Configure control panel with appropriate width for 1920x1080
+        VBox controlPanel = new VBox(15);
+        controlPanel.setPadding(new Insets(15));
         controlPanel.setAlignment(Pos.TOP_CENTER);
-        controlPanel.setPrefWidth(300);
-
+        controlPanel.setPrefWidth(300); // Fixed width that works well for 1920x1080
+        
+        // Configure game settings section
         Label gameSettingsLabel = new Label("Game Settings");
         gameSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 16));
-     // Create vertical layout for game settings instead of one horizontal box
-        VBox gameSettingsBox = new VBox(10);
+        
+        // Create vertical layout for game settings
+        VBox gameSettingsBox = new VBox(8);
         gameSettingsBox.setAlignment(Pos.CENTER_LEFT);
 
         // First row: AI checkbox
@@ -364,7 +376,7 @@ public class ChessGame extends Application {
         themeSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 16));
 
         // Create vertical layout for theme settings
-        VBox themeSettingsBox = new VBox(10);
+        VBox themeSettingsBox = new VBox(8);
         themeSettingsBox.setAlignment(Pos.CENTER_LEFT);
 
         // First row: Theme selector
@@ -408,7 +420,7 @@ public class ChessGame extends Application {
         networkSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 16));
 
         // Create vertical layout for network settings
-        VBox networkSettingsBox = new VBox(10);
+        VBox networkSettingsBox = new VBox(8);
         networkSettingsBox.setAlignment(Pos.CENTER_LEFT);
 
         // IP address row
@@ -443,24 +455,32 @@ public class ChessGame extends Application {
         // Add all network control rows
         networkSettingsBox.getChildren().addAll(ipBox, portBox, connectionButtonsBox);
 
-        // Add all sections to the control panel
+        // Add all sections to the control panel with spacing
         controlPanel.getChildren().addAll(
             gameSettingsLabel, gameSettingsBox,
+            new Separator(), // Add separators between sections
             themeSettingsLabel, themeSettingsBox,
+            new Separator(),
             networkSettingsLabel, networkSettingsBox
         );
 
         root.setRight(controlPanel);
 
+        // Initialize network controls
         initializeNetworkControls();
-        controlPanel.getChildren().add(connectionBox);
+        
+        // Configure game log area with appropriate height
+        gameLogArea.setPrefHeight(100);
         ScrollPane logScrollPane = new ScrollPane(gameLogArea);
         logScrollPane.setFitToWidth(true);
         logScrollPane.setPrefHeight(120);
         root.setBottom(logScrollPane);
 
-        Scene scene = new Scene(root, screenWidth * 0.9, screenHeight * 0.9);
+        // Create scene with appropriate size for 1920x1080
+        Scene scene = new Scene(root, screenWidth * 0.95, screenHeight * 0.95);
         primaryStage.setScene(scene);
+        
+        // For 1920x1080, maximize the window but keep a small margin
         primaryStage.setMaximized(true);
 
         applyTheme(false);
@@ -1158,6 +1178,7 @@ public class ChessGame extends Application {
     private void logGameMessage(String message) {
         if (gameLogArea != null) {
             gameLogArea.appendText(message + "\n");
+            gameLogArea.positionCaret(gameLogArea.getText().length());  // Scroll to end
         }
     }
     
@@ -1176,6 +1197,16 @@ public class ChessGame extends Application {
             getChildren().add(canvas);
             canvas.setOnMouseClicked(this::handleMouseClick);
             setAlignment(Pos.CENTER);
+            
+            // Add border to make the board stand out
+            setBorder(new javafx.scene.layout.Border(
+                new javafx.scene.layout.BorderStroke(
+                    Color.DARKGRAY, 
+                    javafx.scene.layout.BorderStrokeStyle.SOLID, 
+                    new javafx.scene.layout.CornerRadii(5), 
+                    new javafx.scene.layout.BorderWidths(3)
+                )
+            ));
         }
         
         void toggleKingHighlight() {
