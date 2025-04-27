@@ -2,6 +2,7 @@ package chesspkg;
 
 import java.io.*;
 import java.net.*;
+import java.util.Enumeration;
 import java.util.concurrent.*;
 import javafx.application.Platform;
 
@@ -106,11 +107,15 @@ public class NetworkChessManager {
         isServer = true;
         executor.submit(() -> {
             try {
-                serverSocket = new ServerSocket(port);
+                // Get the correct IP address first
+                String ipAddress = getLocalIpAddress();
+                // Bind specifically to this address
+                serverSocket = new ServerSocket(port, 50, InetAddress.getByName(ipAddress));
+                
                 Platform.runLater(() -> {
                     if (listener != null) {
                         listener.onGameMessage("Server started. Waiting for opponent to connect...");
-                        listener.onGameMessage("Your IP address: " + getLocalIpAddress());
+                        listener.onGameMessage("Your IP address: " + ipAddress);
                     }
                 });
                 
@@ -153,7 +158,17 @@ public class NetworkChessManager {
                     }
                 });
                 
-                clientSocket = new Socket(address, port);
+                // Add more detailed error handling
+                try {
+                    clientSocket = new Socket();
+                    // Set a reasonable timeout
+                    clientSocket.connect(new InetSocketAddress(address, port), 5000);
+                } catch (ConnectException ce) {
+                    throw new IOException("Connection refused: The server might not be running or the IP/port might be incorrect");
+                } catch (SocketTimeoutException ste) {
+                    throw new IOException("Connection timed out: The server might be behind a firewall or network address translation");
+                }
+                
                 setupStreams();
                 
                 Platform.runLater(() -> {
@@ -169,6 +184,27 @@ public class NetworkChessManager {
                 Platform.runLater(() -> {
                     if (listener != null) {
                         listener.onGameMessage("Connection error: " + e.getMessage());
+                    }
+                });
+            }
+        });
+    }
+    
+    public void testConnection(String address, int port) {
+        executor.submit(() -> {
+            try {
+                Socket testSocket = new Socket();
+                testSocket.connect(new InetSocketAddress(address, port), 5000);
+                Platform.runLater(() -> {
+                    if (listener != null) {
+                        listener.onGameMessage("Test connection successful!");
+                    }
+                });
+                testSocket.close();
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    if (listener != null) {
+                        listener.onGameMessage("Test connection failed: " + e.getMessage());
                     }
                 });
             }
@@ -283,8 +319,24 @@ public class NetworkChessManager {
      */
     private String getLocalIpAddress() {
         try {
+            // Try to find a non-loopback address
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                if (networkInterface.isUp() && !networkInterface.isLoopback()) {
+                    Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                    while (addresses.hasMoreElements()) {
+                        InetAddress addr = addresses.nextElement();
+                        if (addr instanceof Inet4Address) {
+                            return addr.getHostAddress();
+                        }
+                    }
+                }
+            }
+            
+            // Fall back to the default method if no suitable address is found
             return InetAddress.getLocalHost().getHostAddress();
-        } catch (UnknownHostException e) {
+        } catch (Exception e) {
             return "Could not determine IP address";
         }
     }
