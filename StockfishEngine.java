@@ -13,7 +13,7 @@ public class StockfishEngine {
     public StockfishEngine() {
         try {
             // Path to Stockfish executable - update this to your path
-            String stockfishPath = "C:\\Users\\Aniruddh\\OneDrive - Amrita vishwa vidyapeetham\\Personal\\Programming\\Java\\Sem 2\\stockfish\\stockfish-windows-x86-64-avx2.exe"; 
+            String stockfishPath = "Path_to_stockfish.exe"; 
             
             // Use ProcessBuilder instead of Runtime.exec()
             ProcessBuilder processBuilder = new ProcessBuilder(stockfishPath);
