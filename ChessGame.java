@@ -36,13 +36,8 @@ import java.util.Optional;
 import java.util.Set;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import javafx.scene.control.TextField;
 
 interface Drawable {
     void draw(GraphicsContext gc, int x, int y);
@@ -249,15 +244,6 @@ public class ChessGame extends Application {
     private Button darkModeButton;
     private BorderPane root;
     
-    private NetworkChessManager networkManager;
-    private boolean playingOnline = false;
-    private boolean isMyTurn = true;
-    private boolean isWhitePlayer; // Added to track player's color
-    private TextArea gameLogArea;
-    private TextField ipAddressField;
-    private TextField portField;
-    private HBox connectionBox;
-    
     private Button flipBoardButton;
 
     @Override
@@ -267,13 +253,12 @@ public class ChessGame extends Application {
         
         // Get the screen size
         Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
-        double screenHeight = screenBounds.getHeight(); // 1080
-        double screenWidth = screenBounds.getWidth();   // 1920
+        double screenHeight = screenBounds.getHeight();
+        double screenWidth = screenBounds.getWidth();
         
-        // Optimal calculations for 1920x1080
-        // Calculate square size based on available height, accounting for padding and controls
-        int availableHeight = (int)(screenHeight - 150); // Leave space for UI controls
-        int optimalSquareSize = Math.min(availableHeight / SIZE, 80); // Cap at 80px per square
+        // Optimal calculations for screen size
+        int availableHeight = (int)(screenHeight - 150);
+        int optimalSquareSize = Math.min(availableHeight / SIZE, 80);
         SQUARE_SIZE = optimalSquareSize;
         
         // Initialize currentTheme before it's used
@@ -307,11 +292,11 @@ public class ChessGame extends Application {
         kingFlashAnimation.setCycleCount(Timeline.INDEFINITE);
         kingFlashAnimation.setAutoReverse(true);
 
-        // Configure control panel with appropriate width for 1920x1080
+        // Configure control panel with appropriate width
         VBox controlPanel = new VBox(15);
         controlPanel.setPadding(new Insets(15));
         controlPanel.setAlignment(Pos.TOP_CENTER);
-        controlPanel.setPrefWidth(300); // Fixed width that works well for 1920x1080
+        controlPanel.setPrefWidth(300);
         
         // Configure game settings section
         Label gameSettingsLabel = new Label("Game Settings");
@@ -415,72 +400,19 @@ public class ChessGame extends Application {
         // Add all rows to the theme settings section
         themeSettingsBox.getChildren().addAll(themeBox, darkModeBox, flipBoardBox);
 
-        // Network Settings Section
-        Label networkSettingsLabel = new Label("Network Settings");
-        networkSettingsLabel.setFont(Font.font("Sans-Serif", FontWeight.BOLD, 16));
-
-        // Create vertical layout for network settings
-        VBox networkSettingsBox = new VBox(8);
-        networkSettingsBox.setAlignment(Pos.CENTER_LEFT);
-
-        // IP address row
-        HBox ipBox = new HBox(10);
-        ipBox.setAlignment(Pos.CENTER_LEFT);
-        Label ipLabel = new Label("IP Address:");
-        ipAddressField = new TextField();
-        ipAddressField.setPrefWidth(150);
-        ipAddressField.setPromptText("IP Address");
-        ipBox.getChildren().addAll(ipLabel, ipAddressField);
-
-        // Port row
-        HBox portBox = new HBox(10);
-        portBox.setAlignment(Pos.CENTER_LEFT);
-        Label portLabel = new Label("Port:");
-        portField = new TextField("8888");
-        portField.setPrefWidth(150);
-        portField.setPromptText("Port");
-        portBox.getChildren().addAll(portLabel, portField);
-
-        // Connection buttons row
-        HBox connectionButtonsBox = new HBox(10);
-        connectionButtonsBox.setAlignment(Pos.CENTER_LEFT);
-        Button hostButton = new Button("Host Game");
-        hostButton.setPrefWidth(130);
-        hostButton.setOnAction(e -> startHosting());
-        Button joinButton = new Button("Join Game");
-        joinButton.setPrefWidth(130);
-        joinButton.setOnAction(e -> joinGame());
-        connectionButtonsBox.getChildren().addAll(hostButton, joinButton);
-
-        // Add all network control rows
-        networkSettingsBox.getChildren().addAll(ipBox, portBox, connectionButtonsBox);
-
         // Add all sections to the control panel with spacing
         controlPanel.getChildren().addAll(
             gameSettingsLabel, gameSettingsBox,
-            new Separator(), // Add separators between sections
-            themeSettingsLabel, themeSettingsBox,
-            new Separator(),
-            networkSettingsLabel, networkSettingsBox
+            new Separator(), // Add separator between sections
+            themeSettingsLabel, themeSettingsBox
         );
 
         root.setRight(controlPanel);
 
-        // Initialize network controls
-        initializeNetworkControls();
-        
-        // Configure game log area with appropriate height
-        gameLogArea.setPrefHeight(100);
-        ScrollPane logScrollPane = new ScrollPane(gameLogArea);
-        logScrollPane.setFitToWidth(true);
-        logScrollPane.setPrefHeight(120);
-        root.setBottom(logScrollPane);
-
-        // Create scene with appropriate size for 1920x1080
+        // Create scene with appropriate size
         Scene scene = new Scene(root, screenWidth * 0.95, screenHeight * 0.95);
         primaryStage.setScene(scene);
         
-        // For 1920x1080, maximize the window but keep a small margin
         primaryStage.setMaximized(true);
 
         applyTheme(false);
@@ -493,60 +425,6 @@ public class ChessGame extends Application {
         primaryStage.show();
     }
 
-    private void initializeNetworkControls() {
-        ipAddressField = new TextField();
-        ipAddressField.setPromptText("IP Address");
-        portField = new TextField("8888");
-        portField.setPromptText("Port");
-        Button hostButton = new Button("Host Game");
-        hostButton.setOnAction(e -> startHosting());
-        Button joinButton = new Button("Join Game");
-        joinButton.setOnAction(e -> joinGame());
-        connectionBox = new HBox();
-        connectionBox.setAlignment(Pos.CENTER);
-
-        gameLogArea = new TextArea();
-        gameLogArea.setEditable(false);
-        gameLogArea.setPrefHeight(100);
-
-        networkManager = new NetworkChessManager(this);
-        networkManager.setEventListener(new NetworkEventHandler());
-        try {
-            String localIp = InetAddress.getLocalHost().getHostAddress();
-            ipAddressField.setText(localIp);
-        } catch (UnknownHostException ex) {
-            ipAddressField.setText("localhost");
-        }
-    }
-    
-    private class NetworkEventHandler implements NetworkChessManager.GameEventListener {
-        @Override
-        public void onMoveReceived(int startRow, int startCol, int endRow, int endCol, char promotionType) {
-            movePiece(startRow, startCol, endRow, endCol, promotionType);
-            updateCheckStatus();
-            chessBoard.draw();
-        }
-
-        @Override
-        public void onConnectionEstablished(boolean isWhite) {
-            isWhitePlayer = isWhite;
-            isMyTurn = isWhite;
-            resetGame();
-        }
-
-        @Override
-        public void onConnectionLost() {
-            playingOnline = false;
-            isMyTurn = true;
-            logGameMessage("Connection lost. Returning to local play.");
-        }
-
-        @Override
-        public void onGameMessage(String message) {
-            logGameMessage(message);
-        }
-    }
-
     private void applyTheme(boolean darkMode) {
         if (darkMode) {
             root.setStyle("-fx-background-color: #1A1A2E;");
@@ -555,11 +433,6 @@ public class ChessGame extends Application {
             for (Node node : rightPanel.getChildren()) {
                 applyNodeStyle(node, true);
             }
-            ScrollPane logScrollPane = (ScrollPane) root.getBottom();
-            if (logScrollPane.getContent() instanceof TextArea) {
-                TextArea logArea = (TextArea) logScrollPane.getContent();
-                logArea.setStyle("-fx-control-inner-background: #1A1A2E; -fx-text-fill: #E0E0E0;");
-            }
             darkModeButton.setText("Toggle Light Mode");
         } else {
             root.setStyle("-fx-background-color: #F5F5F5;");
@@ -567,11 +440,6 @@ public class ChessGame extends Application {
             VBox rightPanel = (VBox) root.getRight();
             for (Node node : rightPanel.getChildren()) {
                 applyNodeStyle(node, false);
-            }
-            ScrollPane logScrollPane = (ScrollPane) root.getBottom();
-            if (logScrollPane.getContent() instanceof TextArea) {
-                TextArea logArea = (TextArea) logScrollPane.getContent();
-                logArea.setStyle("");
             }
             darkModeButton.setText("Toggle Dark Mode");
         }
@@ -726,8 +594,8 @@ public class ChessGame extends Application {
                 return endRow == startRow + direction;
             } else if (Math.abs(startCol - endCol) == 1) {
                 return endRow == startRow + direction && 
-                       board[endRow][endCol] != null && 
-                       board[endRow][endCol].color != piece.color;
+                      board[endRow][endCol] != null && 
+                      board[endRow][endCol].color != piece.color;
             }
             return false;
         }
@@ -761,7 +629,7 @@ public class ChessGame extends Application {
             default: return new Queen(row, col, color);
         }
     }
-    
+
     private void resetGame() {
         board = new ChessPiece[SIZE][SIZE];
         initializeBoard();
@@ -770,27 +638,21 @@ public class ChessGame extends Application {
         legalMoveCache.clear();
         whiteKingInCheck = blackKingInCheck = false;
         castlingRights.reset();
-        if (playingOnline) {
-            isMyTurn = isWhitePlayer;
-        }
         if (playingAgainstAI && !aiIsBlack) {
             makeAIMove();
         }
         updateCheckStatus();
         chessBoard.draw();
     }
-    
+
     @Override
     public void stop() throws Exception {
         if (stockfish != null) {
             stockfish.close();
         }
-        if (networkManager != null) {
-            networkManager.cleanup();
-        }
         super.stop();
     }
-    
+
     private void makeAIMove() {
         String fen = stockfish.boardToFEN(board, whiteTurn, castlingRights);
         String bestMove = stockfish.getBestMove(fen);
@@ -805,7 +667,7 @@ public class ChessGame extends Application {
             chessBoard.draw();
         }
     }
-    
+
     private boolean movePiece(int startRow, int startCol, int endRow, int endCol, char promotionType) {
         ChessPiece piece = board[startRow][startCol];
         if (piece == null) return false;
@@ -828,9 +690,6 @@ public class ChessGame extends Application {
             castlingRights.markKingMoved(piece.color);
             castlingRights.markRookMoved(piece.color, rookStartCol == 0);
             switchTurn();
-            if (playingOnline && isConnected()) {
-                networkManager.sendMove(startRow, startCol, endRow, endCol, promotionType);
-            }
             return true;
         }
         
@@ -879,18 +738,11 @@ public class ChessGame extends Application {
         }
         
         switchTurn();
-        if (playingOnline && isConnected()) {
-            networkManager.sendMove(startRow, startCol, endRow, endCol, promotionType);
-        }
-        
         return true;
     }
-    
+
     private void switchTurn() {
         whiteTurn = !whiteTurn;
-        if (playingOnline) {
-            isMyTurn = (isWhitePlayer == whiteTurn);
-        }
         statusLabel.setText(whiteTurn ? "White's turn" : "Black's turn");
         if (playingAgainstAI && 
             ((whiteTurn && !aiIsBlack) || (!whiteTurn && aiIsBlack))) {
@@ -900,7 +752,7 @@ public class ChessGame extends Application {
             timeline.play();
         }
     }
-    
+
     private void updateCheckStatus() {
         whiteKingInCheck = isKingInCheck(Color.WHITE);
         blackKingInCheck = isKingInCheck(Color.BLACK);
@@ -924,7 +776,7 @@ public class ChessGame extends Application {
             }
         }
     }
-    
+
     private boolean isCheckmate(Color kingColor) {
         if (!isKingInCheck(kingColor)) return false;
         for (int startRow = 0; startRow < SIZE; startRow++) {
@@ -964,7 +816,7 @@ public class ChessGame extends Application {
         }
         return true;
     }
-    
+
     private boolean isStalemate(Color color) {
         if (isKingInCheck(color)) return false;
         for (int startRow = 0; startRow < SIZE; startRow++) {
@@ -1004,7 +856,7 @@ public class ChessGame extends Application {
         }
         return true;
     }
-    
+
     private void showGameOverDialog(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Game Over");
@@ -1022,13 +874,10 @@ public class ChessGame extends Application {
             }
         }
     }
-    
+
     private void handleSquareClicked(int row, int col) {
         if (playingAgainstAI && 
             ((whiteTurn && !aiIsBlack) || (!whiteTurn && aiIsBlack))) {
-            return;
-        }
-        if (playingOnline && !isMyTurn) {
             return;
         }
         if (selectedRow == -1 && selectedCol == -1) {
@@ -1072,7 +921,7 @@ public class ChessGame extends Application {
             }
         }
     }
-    
+
     private void calculateLegalMoves(int row, int col) {
         legalMoveCache.clear();
         ChessPiece piece = board[row][col];
@@ -1117,7 +966,7 @@ public class ChessGame extends Application {
             }
         }
     }
-    
+
     private void showPromotionDialog(int startRow, int startCol, int endRow, int endCol) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Pawn Promotion");
@@ -1142,50 +991,7 @@ public class ChessGame extends Application {
             chessBoard.draw();
         }
     }
-    
-    private void startHosting() {
-        try {
-            int port = Integer.parseInt(portField.getText());
-            resetGame();
-            playingOnline = true;
-            playingAgainstAI = false;
-            whiteTurn = true;
-            isMyTurn = true;
-            networkManager.startServer(port);
-            logGameMessage("Starting server on port " + port);
-            logGameMessage("Waiting for opponent to connect...");
-        } catch (NumberFormatException e) {
-            logGameMessage("Invalid port number");
-        }
-    }
-    
-    private void joinGame() {
-        try {
-            String address = ipAddressField.getText();
-            int port = Integer.parseInt(portField.getText());
-            resetGame();
-            playingOnline = true;
-            playingAgainstAI = false;
-            whiteTurn = true;
-            isMyTurn = false;
-            networkManager.connectToServer(address, port);
-            logGameMessage("Connecting to " + address + ":" + port);
-        } catch (NumberFormatException e) {
-            logGameMessage("Invalid port number");
-        }
-    }
 
-    private void logGameMessage(String message) {
-        if (gameLogArea != null) {
-            gameLogArea.appendText(message + "\n");
-            gameLogArea.positionCaret(gameLogArea.getText().length());  // Scroll to end
-        }
-    }
-    
-    private boolean isConnected() {
-        return networkManager != null && networkManager.isConnected();
-    }
-    
     private class ChessBoard extends StackPane {
         private Canvas canvas;
         private GraphicsContext gc;
@@ -1290,7 +1096,7 @@ public class ChessGame extends Application {
             }
         }
     }
-    
+
     public static void main(String[] args) {
         launch(args);
     }
