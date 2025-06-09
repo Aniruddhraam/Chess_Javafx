@@ -19,7 +19,6 @@ A fully-featured Chess application built with JavaFX, offering:
    - [Clone & Build](#clone--build)  
 4. [Usage](#usage)  
 5. [Contributing](#contributing)  
-6. [Project Structure](#project-structure)
 
 ---
 
@@ -113,19 +112,3 @@ java --module-path /path/to/javafx-sdk/lib \
 5. Open a Pull Request  
 
 Please follow the existing code style and include relevant tests.  
-
-src/
-├── main/
-│   ├── java/
-│   │   └── ChessGame.java         ← Main Application
-│   │   ├── ChessBoard.java        ← UI canvas & rendering
-│   │   ├── pieces/                ← `ChessPiece` subclasses
-│   │   ├── ai/                    ← Stockfish engine wrapper
-│   │   └── themes/                ← `ChessTheme` definitions
-│   └── resources/
-│       └── stockfish/             ← (optional) Stockfish binary
-docs/
-├── screenshot.png
-README.md
-pom.xml
-
