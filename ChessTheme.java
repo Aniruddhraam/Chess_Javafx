@@ -1,5 +1,3 @@
-package chesspkg;
-
 import javafx.scene.paint.Color;
 class ChessTheme {
     private String name;

@@ -1,12 +1,17 @@
-package chesspkg;
-
 import javafx.application.Application;
+// Application is the entry point to all javafx application, where all programs should override start
 import javafx.animation.KeyFrame;
+// Uses timeline marks a particular moment, gives the property of animated objects
 import javafx.animation.Timeline;
+// Used for creating keyframe based animations containing time and playback controls
 import javafx.geometry.Insets;
+// Empty space around a object which gives visual spacing between nodes
 import javafx.geometry.Pos;
+// Used to specify the alignment or position of nodes in individual containers
 import javafx.geometry.Point2D;
+// Used to give the point in a 2D-coordinate system, and works with mouse clicks
 import javafx.scene.Node;
+// Fundamental units of a javafx application. Usually placed in containers
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -19,6 +24,7 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
+// Used as the root of our application
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -243,6 +249,7 @@ public class ChessGame extends Application {
     private boolean darkModeEnabled = false;
     private Button darkModeButton;
     private BorderPane root;
+    // Arranges nodes 5 distinct regions
     
     private Button flipBoardButton;
 

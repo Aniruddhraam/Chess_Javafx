@@ -1,5 +1,3 @@
-package chesspkg;
-
 import java.io.*;
 import java.util.concurrent.TimeUnit;
 import javafx.scene.paint.Color;
